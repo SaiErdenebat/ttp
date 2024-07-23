@@ -3,20 +3,26 @@ import requests
 import json
 import pandas as pd
 
-loginUrl=('https://api.tradethepool.com/user/login')
-accountNumber = st.text_input("Enter your account number", type="default")
-#F13011327
-tradesUrl = ("https://api.tradethepool.com/position/closed/" + str(accountNumber))
-print(tradesUrl)
+loginUrl=('https://api.tradethepool.com/user/login') 
+
 payload = {
     'username': "",
     'password': ""
 }
-username = st.text_input("Enter an email", type="default")
-password = st.text_input("Enter a password", type="password")
-with requests.session() as s:
+payload['username'] = st.text_input("Enter an email", type="default")
+payload['password']= st.text_input("Enter a password", type="password")
+
+
+accountNumber = st.selectbox("Choose an account number:", ("F13011327", ""))
+tradesUrl = ("https://api.tradethepool.com/position/closed/" + str(accountNumber))
+
+
+try:
+    s = requests.Session()
     p = s.post(loginUrl, data=payload)
     token = p.json()['data']['token']
+
+
 
     r = s.get(tradesUrl, headers={'Authorization': "Bearer {}".format(token)})
     
@@ -47,3 +53,5 @@ with requests.session() as s:
     #grouped[['closedDateOnly', 'profitAndLoss']].plot(kind='bar')
     st.bar_chart(grouped[['profitAndLoss']])
     st.bar_chart(filtered['cost'])
+except KeyError:
+    print("Time out") 
