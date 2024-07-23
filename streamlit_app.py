@@ -4,12 +4,15 @@ import json
 import pandas as pd
 
 loginUrl=('https://api.tradethepool.com/user/login')
-tradesUrl = ('https://api.tradethepool.com/position/closed/F13011327')
+accountNumber = st.text_input("Enter your account number", type="default")
+#F13011327
+tradesUrl = ("https://api.tradethepool.com/position/closed/" + str(accountNumber))
+print(tradesUrl)
 payload = {
     'username': "",
     'password': ""
 }
-username = st.text_input("Enter a password", type="default")
+username = st.text_input("Enter an email", type="default")
 password = st.text_input("Enter a password", type="password")
 with requests.session() as s:
     p = s.post(loginUrl, data=payload)
