@@ -14,7 +14,7 @@ payload = {
 #accountNumber = st.selectbox("Choose an account number:", ("F13011327", ""))
 
 payload['username'] = st.secrets.db_username
-payload['password'] = st.secrets.db_.password
+payload['password'] = st.secrets.db_password
 tradesUrl = ("https://api.tradethepool.com/position/closed/" + str(st.secrets.account_number))
 
 
