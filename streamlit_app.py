@@ -9,11 +9,12 @@ payload = {
     'username': "",
     'password': ""
 }
-payload['username'] = st.text_input("Enter an email", type="default")
+#payload['username'] = st.text_input("Enter an email", type="default")
 payload['password']= st.text_input("Enter a password", type="password")
-
-
 accountNumber = st.selectbox("Choose an account number:", ("F13011327", ""))
+
+payload['username'] = st.secrets.db_username
+# payload['password'] = st.secrets.db_credentials.password
 tradesUrl = ("https://api.tradethepool.com/position/closed/" + str(accountNumber))
 
 
@@ -45,13 +46,17 @@ try:
     #filtered['profitAndLoss'].plot(kind='bar')
     
     #filtered['balance'].plot.line()
-    st.bar_chart(filtered['profitAndLoss'])
-    st.line_chart(filtered['balance'])
+   # st.bar_chart(filtered['profitAndLoss'])
+   # st.line_chart(filtered['balance'])
 
-    grouped = filtered.groupby('closedDateOnly').sum().reset_index()
+   # grouped = filtered.groupby('closedDateOnly').sum().reset_index()
     #print(grouped[['closedDateOnly', 'profitAndLoss']])
     #grouped[['closedDateOnly', 'profitAndLoss']].plot(kind='bar')
-    st.bar_chart(grouped[['profitAndLoss']])
-    st.bar_chart(filtered['cost'])
+   # st.bar_chart(grouped[['profitAndLoss']])
+    st.bar_chart(filtered['profitAndLoss'])
+    print(filtered)
+    st.bar_chart(
+        filtered, x='closeDate', y=['profitAndLoss','cost'], color=["#FF0000", "#0000FF"]  # Optional
+    )
 except KeyError:
     print("Time out") 
