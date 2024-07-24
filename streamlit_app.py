@@ -50,7 +50,7 @@ try:
     df['balance'] = df['profitAndLoss'].cumsum()
     df = df.reset_index(drop=True)
     
-    filtered = df[['createdAt', 'closeDate','closedDateOnly', 'symbol', 'quantity', 'entry', 'exit', 'percent', 'profitAndLoss', 'balance', 'cost', ]]
+    filtered = df[['createdAt', 'closeDate','closedDateOnly', 'symbol', 'quantity', 'entry', 'exit', 'percent', 'profitAndLoss', 'balance', 'cost']]
 
     
     #print(filtered.to_string())
