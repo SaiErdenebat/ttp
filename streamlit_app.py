@@ -56,7 +56,7 @@ try:
     #print(filtered.to_string())
     #filtered['profitAndLoss'].plot(kind='bar')
     
-    #filtered['balance'].plot.line()
+    filtered['balance'].plot.line()
    # st.bar_chart(filtered['profitAndLoss'])
    # st.line_chart(filtered['balance'])
 
