@@ -56,9 +56,9 @@ try:
     #print(filtered.to_string())
     #filtered['profitAndLoss'].plot(kind='bar')
     
-    filtered['balance'].plot.line()
-   # st.bar_chart(filtered['profitAndLoss'])
-   # st.line_chart(filtered['balance'])
+    #filtered['balance'].plot.line()
+    #st.bar_chart(filtered['profitAndLoss'])
+    #st.line_chart(filtered['balance'])
 
    # grouped = filtered.groupby('closedDateOnly').sum().reset_index()
     #print(grouped[['closedDateOnly', 'profitAndLoss']])
