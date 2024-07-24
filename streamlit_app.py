@@ -10,12 +10,12 @@ payload = {
     'password': ""
 }
 #payload['username'] = st.text_input("Enter an email", type="default")
-payload['password']= st.text_input("Enter a password", type="password")
-accountNumber = st.selectbox("Choose an account number:", ("F13011327", ""))
+#payload['password']= st.text_input("Enter a password", type="password")
+#accountNumber = st.selectbox("Choose an account number:", ("F13011327", ""))
 
 payload['username'] = st.secrets.db_username
-# payload['password'] = st.secrets.db_credentials.password
-tradesUrl = ("https://api.tradethepool.com/position/closed/" + str(accountNumber))
+payload['password'] = st.secrets.db_.password
+tradesUrl = ("https://api.tradethepool.com/position/closed/" + str(st.secrets.account_number))
 
 
 try:
