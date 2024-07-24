@@ -39,7 +39,7 @@ try:
     #    'profitAndLoss', 'quantity', 'routeId', 'side', 'swap', 'symbol',
     #    'tradableInstrumentId', 'updatedAt', 'id'],
 
-    print(df['id'])
+    #print(df['id'])
     df['entry'] = round(df['entry'], 2)
     df['exit'] = round(df['exit'], 2)
     df['cost'] = df['entry'] * df['quantity']
@@ -53,7 +53,7 @@ try:
     filtered = df[['createdAt', 'closeDate','closedDateOnly', 'symbol', 'quantity', 'entry', 'exit', 'percent', 'profitAndLoss', 'balance', 'cost', ]]
 
     
-    print(filtered.to_string())
+    #print(filtered.to_string())
     #filtered['profitAndLoss'].plot(kind='bar')
     
     #filtered['balance'].plot.line()
