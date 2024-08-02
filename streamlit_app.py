@@ -54,14 +54,6 @@ try:
 
     
     #print(filtered.to_string())
-<<<<<<< HEAD
-=======
-    #filtered['profitAndLoss'].plot(kind='bar')
-    
-    #filtered['balance'].plot.line()
-    #st.bar_chart(filtered['profitAndLoss'])
-    #st.line_chart(filtered['balance'])
->>>>>>> 7d02a7b6f1ca0143bc8ce6c25c9237ed5fa86e8f
 
     st.line_chart(filtered['balance'])
 
