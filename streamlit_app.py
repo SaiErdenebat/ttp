@@ -70,5 +70,7 @@ try:
         filtered, x='closeDate', y=['profitAndLoss','cost'], color=["#FF0000", "#0000FF"]  # Optional
     )
     st.bar_chart(filtered['percent'])
+    st.dataframe(filtered)
+    st.dataframe(filtered.groupby('closedDateOnly')['profitAndLoss'])
 except KeyError:
     print("keyError") 
