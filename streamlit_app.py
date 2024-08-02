@@ -46,7 +46,7 @@ try:
     df['percent'] = round((df['entry']-df['exit'])/df['entry']*100, 2)##.astype(str) + '%'
     df['closedDateOnly'] = df['closeDate'].str.slice(0, 10)
     #df = df.sort_values(by=['closedDateOnly'])
-    df = df.sort_values(by=['openDate'])
+    df = df.sort_values(by=['closeDate'])
     df['balance'] = df['profitAndLoss'].cumsum()
     df = df.reset_index(drop=True)
     
