@@ -72,6 +72,9 @@ try:
     #st.bar_chart(filtered['percent'])
     #st.write(filtered)
     #st.dataframe(filtered, hide_index=True)
-    st.dataframe(filtered.groupby('closedDateOnly')['profitAndLoss'].sum(), hide_index=True)
+    dailyProfit = filtered.groupby('closedDateOnly')['profitAndLoss'].sum()
+    #st.dataframe(, hide_index=True)
+    st.bar_chart(dailyProfit)
+    st.line_chart(dailyProfit)
 except KeyError:
     print("keyError") 
