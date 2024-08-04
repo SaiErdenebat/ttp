@@ -75,6 +75,6 @@ try:
     dailyProfit = filtered.groupby('closedDateOnly')['profitAndLoss'].sum()
     #st.dataframe(, hide_index=True)
     st.bar_chart(dailyProfit)
-    st.line_chart(dailyProfit)
+    #st.line_chart(dailyProfit)
 except KeyError:
     print("keyError") 
