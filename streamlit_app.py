@@ -73,8 +73,21 @@ try:
     #st.write(filtered)
     #st.dataframe(filtered, hide_index=True)
     dailyProfit = filtered.groupby('closedDateOnly')['profitAndLoss'].sum()
-    #st.dataframe(, hide_index=True)
+
+    st.dataframe(dailyProfit, hide_index=True)
     st.bar_chart(dailyProfit)
     #st.line_chart(dailyProfit)
+    
+    
+    lastTradedDay = filtered.iloc[-1]['closedDateOnly']
+    tradedDays = filtered.closedDateOnly.unique()
+    option = st.selectbox('Select a date', tradedDays, index=tradedDays.size-1)
+    
+
+    
+    #print(lastTradedDay)
+    lastDay = filtered[filtered['closedDateOnly'] == option]
+    st.dataframe(lastDay.iloc[:,3:],  hide_index=True)
+    st.bar_chart(lastDay['profitAndLoss'])
 except KeyError:
     print("keyError") 
