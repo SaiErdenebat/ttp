@@ -52,33 +52,8 @@ try:
     
     filtered = df[['createdAt', 'closeDate','closedDateOnly', 'symbol', 'quantity', 'entry', 'exit', 'percent', 'profitAndLoss', 'balance', 'cost']]
 
-    
-    #print(filtered.to_string())
-    #filtered['profitAndLoss'].plot(kind='bar')
-    
-    #filtered['balance'].plot.line()
-    #st.bar_chart(filtered['profitAndLoss'])
-    st.line_chart(filtered['balance'])
 
-   # grouped = filtered.groupby('closedDateOnly').sum().reset_index()
-    #print(grouped[['closedDateOnly', 'profitAndLoss']])
-    #grouped[['closedDateOnly', 'profitAndLoss']].plot(kind='bar')
-   # st.bar_chart(grouped[['profitAndLoss']])
-    st.bar_chart(filtered['profitAndLoss'])
-    #print(filtered)
-    st.bar_chart(
-        filtered, x='closeDate', y=['profitAndLoss','cost'], color=["#FF0000", "#0000FF"]  # Optional
-    )
-    #st.bar_chart(filtered['percent'])
-    #st.write(filtered)
-    #st.dataframe(filtered, hide_index=True)
-    dailyProfit = filtered.groupby('closedDateOnly')['profitAndLoss'].sum()
-
-    st.dataframe(dailyProfit, hide_index=True)
-    st.bar_chart(dailyProfit)
-    #st.line_chart(dailyProfit)
-    
-    
+    st.header("Best Losers Win")
     lastTradedDay = filtered.iloc[-1]['closedDateOnly']
     tradedDays = filtered.closedDateOnly.unique()
     option = st.selectbox('Select a date', tradedDays, index=tradedDays.size-1)
@@ -87,7 +62,61 @@ try:
     
     #print(lastTradedDay)
     lastDay = filtered[filtered['closedDateOnly'] == option]
+    lastDay['cumulative'] = lastDay['profitAndLoss'].cumsum()
+    lastDay = lastDay.reset_index(drop=True)
     st.dataframe(lastDay.iloc[:,3:],  hide_index=True)
-    st.bar_chart(lastDay['profitAndLoss'])
+    lastDayBalance = pd.concat([pd.Series([0]), lastDay['cumulative']]).reset_index(drop=True)
+    st.line_chart(lastDayBalance)
+    #st.dataframe(lastDayBalance)
+    #st.bar_chart(lastDay['profitAndLoss'])
+    #st.bar_chart(lastDay['cost'])
+    
+    st.bar_chart(
+        lastDay, y=['cost','profitAndLoss'], color=["#a1c4a6", "#FF0000"]  # Optional
+    )
+    #st.bar_chart(lastDay['percent'])
+    
+    dailyProfit = filtered.groupby('closedDateOnly')['profitAndLoss'].sum()
+
+    #st.dataframe(dailyProfit, hide_index=True)
+    dailyProfit_sorted = dailyProfit.sort_values(ascending=False)
+    dailyProfit_sorted = dailyProfit_sorted.reset_index(drop=True)
+    st.header("Daily PnL")
+    st.bar_chart(dailyProfit)
+    st.bar_chart(dailyProfit_sorted)
+    #st.line_chart(dailyProfit)
+    
+    #print(filtered.to_string())
+    #filtered['profitAndLoss'].plot(kind='bar')
+    
+    #filtered['balance'].plot.line()
+    #st.bar_chart(filtered['profitAndLoss'])
+    st.header("Equity Curve")
+    st.line_chart(filtered['balance'])
+    st.dataframe(filtered, hide_index=True)
+   # grouped = filtered.groupby('closedDateOnly').sum().reset_index()
+    #print(grouped[['closedDateOnly', 'profitAndLoss']])
+    #grouped[['closedDateOnly', 'profitAndLoss']].plot(kind='bar')
+   # st.bar_chart(grouped[['profitAndLoss']])
+    st.bar_chart(filtered['profitAndLoss'])
+    
+    
+    sortedByPnL = filtered.sort_values(by=['profitAndLoss'])
+    sortedByPnL = sortedByPnL.reset_index(drop=True)
+    #st.dataframe(sortedByPnL.iloc[:,2:])
+    #print(sortedByPnL['symbol'].tolist())
+    st.bar_chart(sortedByPnL['profitAndLoss'])
+    
+    #print(filtered)
+    st.bar_chart(
+        filtered, x='closeDate', y=['profitAndLoss','cost'], color=["#FF0000", "#0000FF"]  # Optional
+    )
+    #st.bar_chart(filtered['percent'])
+    #st.write(filtered)
+    #st.dataframe(filtered, hide_index=True)
+
+    
+    
 except KeyError:
     print("keyError") 
+ 
