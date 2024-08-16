@@ -77,7 +77,7 @@ try:
     #st.bar_chart(lastDay['percent'])
     
     dailyProfit = filtered.groupby('closedDateOnly')['profitAndLoss'].sum()
-
+    print(dailyProfit, dailyProfit.cumsum())
     #st.dataframe(dailyProfit, hide_index=True)
     dailyProfit_sorted = dailyProfit.sort_values(ascending=False)
     dailyProfit_sorted = dailyProfit_sorted.reset_index(drop=True)
