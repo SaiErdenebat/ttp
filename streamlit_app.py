@@ -11,14 +11,31 @@ payload = {
 ##
 #payload['username'] = st.text_input("Enter an email", type="default")
 #payload['password']= st.text_input("Enter a password", type="password")
-#accountNumber = st.selectbox("Choose an account number:", ("F", ""))
 
+
+accountNumber = st.selectbox("Choose an account number:", ("12014517",
+    "12016374",
+    "F12016374",
+    "12020109",
+    "F12020109",
+    "12025061",
+    "13000402",
+    "13000809",
+    "E13002593",
+    "F13002878",
+    "E13005910",
+    "E13006961",
+    "E13009393",
+    "E13009422",
+    "E13010054",
+    "F13011327",
+    "EEBP13017137"))
 
 payload['username'] = st.secrets.db_username
 payload['password'] = st.secrets.db_password
 
 loginUrl=('https://api.tradethepool.com/user/login') 
-tradesUrl = ("https://api.tradethepool.com/position/closed/" + str(st.secrets.account_number))
+tradesUrl = ("https://api.tradethepool.com/position/closed/" + str(accountNumber))
 
 
 try:
@@ -77,7 +94,7 @@ try:
     #st.bar_chart(lastDay['percent'])
     
     dailyProfit = filtered.groupby('closedDateOnly')['profitAndLoss'].sum()
-    print(dailyProfit, dailyProfit.cumsum())
+    #print(dailyProfit, dailyProfit.cumsum())
     #st.dataframe(dailyProfit, hide_index=True)
     dailyProfit_sorted = dailyProfit.sort_values(ascending=False)
     dailyProfit_sorted = dailyProfit_sorted.reset_index(drop=True)
