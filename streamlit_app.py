@@ -68,7 +68,15 @@ try:
     df = df.reset_index(drop=True)
     
     filtered = df[['closedDateOnly', 'symbol', 'quantity', 'entry', 'exit', 'percent', 'profitAndLoss', 'balance', 'cost','openDate', 'closeDate']]
+    
+    
+    ### converting to EST
+    #df['utc_time'] = pd.to_datetime(df['utc_time'])
 
+    # Convert UTC to EST (Eastern Standard Time)
+    #df['est_time'] = df['utc_time'].dt.tz_localize('UTC').dt.tz_convert('America/New_York')     
+    ##
+    
     
     st.header("Equity Curve")
     st.line_chart(filtered['balance'])
