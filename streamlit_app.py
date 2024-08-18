@@ -18,14 +18,14 @@ accountNumber = st.selectbox("Choose an account number:", ("12014517",
     "F12016374",
     "12020109",
     "F12020109",
-    "12025061",
-    "13000402",
+    #"12025061",
+    #"13000402",
     "13000809",
     "E13002593",
     "F13002878",
-    "E13005910",
-    "E13006961",
-    "E13009393",
+    #"E13005910",
+    #"E13006961",
+    #"E13009393",
     "E13009422",
     "E13010054",
     "F13011327",
@@ -67,8 +67,33 @@ try:
     df['balance'] = df['profitAndLoss'].cumsum()
     df = df.reset_index(drop=True)
     
-    filtered = df[['createdAt', 'closeDate','closedDateOnly', 'symbol', 'quantity', 'entry', 'exit', 'percent', 'profitAndLoss', 'balance', 'cost']]
+    filtered = df[['closedDateOnly', 'symbol', 'quantity', 'entry', 'exit', 'percent', 'profitAndLoss', 'balance', 'cost','openDate', 'closeDate']]
 
+    
+    st.header("Equity Curve")
+    st.line_chart(filtered['balance'])
+    st.bar_chart(filtered['profitAndLoss'])
+    st.dataframe(filtered.sort_values(by=['profitAndLoss']), hide_index=True)
+    #grouped = filtered.groupby('closedDateOnly').sum().reset_index()
+    #print(grouped[['closedDateOnly', 'profitAndLoss']])
+    #grouped[['closedDateOnly', 'profitAndLoss']].plot(kind='bar')
+    #st.bar_chart(grouped[['profitAndLoss']])
+    
+    
+    
+    sortedByPnL = filtered.sort_values(by=['profitAndLoss'])
+    sortedByPnL = sortedByPnL.reset_index(drop=True)
+    #st.dataframe(sortedByPnL.iloc[:,2:])
+    #print(sortedByPnL['symbol'].tolist())
+    st.bar_chart(sortedByPnL['profitAndLoss'])
+    
+    #print(filtered)
+    st.bar_chart(
+        filtered, x='closeDate', y=['profitAndLoss','cost'], color=["#FF0000", "#0000FF"]  # Optional
+    )
+    #st.bar_chart(filtered['percent'])
+    #st.write(filtered)
+    #st.dataframe(filtered, hide_index=True)
 
     st.header("Best Losers Win")
     lastTradedDay = filtered.iloc[-1]['closedDateOnly']
@@ -108,29 +133,7 @@ try:
     
     #filtered['balance'].plot.line()
     #st.bar_chart(filtered['profitAndLoss'])
-    st.header("Equity Curve")
-    st.line_chart(filtered['balance'])
-    st.dataframe(filtered, hide_index=True)
-   # grouped = filtered.groupby('closedDateOnly').sum().reset_index()
-    #print(grouped[['closedDateOnly', 'profitAndLoss']])
-    #grouped[['closedDateOnly', 'profitAndLoss']].plot(kind='bar')
-   # st.bar_chart(grouped[['profitAndLoss']])
-    st.bar_chart(filtered['profitAndLoss'])
     
-    
-    sortedByPnL = filtered.sort_values(by=['profitAndLoss'])
-    sortedByPnL = sortedByPnL.reset_index(drop=True)
-    #st.dataframe(sortedByPnL.iloc[:,2:])
-    #print(sortedByPnL['symbol'].tolist())
-    st.bar_chart(sortedByPnL['profitAndLoss'])
-    
-    #print(filtered)
-    st.bar_chart(
-        filtered, x='closeDate', y=['profitAndLoss','cost'], color=["#FF0000", "#0000FF"]  # Optional
-    )
-    #st.bar_chart(filtered['percent'])
-    #st.write(filtered)
-    #st.dataframe(filtered, hide_index=True)
 
     
     
