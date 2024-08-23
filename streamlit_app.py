@@ -13,7 +13,9 @@ payload = {
 #payload['password']= st.text_input("Enter a password", type="password")
 
 
-accountNumber = st.selectbox("Choose an account number:", ("12014517",
+accountNumber = st.selectbox("Choose an account number:", (
+    "EEBP13017274",
+    "12014517",
     "12016374",
     "F12016374",
     "12020109",
@@ -29,7 +31,8 @@ accountNumber = st.selectbox("Choose an account number:", ("12014517",
     "E13009422",
     "E13010054",
     "F13011327",
-    "EEBP13017137"))
+    "EEBP13017137"
+    ))
 
 payload['username'] = st.secrets.db_username
 payload['password'] = st.secrets.db_password
@@ -67,9 +70,27 @@ try:
     df['balance'] = df['profitAndLoss'].cumsum()
     df = df.reset_index(drop=True)
     
-    filtered = df[['closedDateOnly', 'symbol', 'quantity', 'entry', 'exit', 'percent', 'profitAndLoss', 'balance', 'cost','openDate', 'closeDate']]
     
+    df['openDate'] = pd.to_datetime(df['openDate'])
+    df['closeDate'] = pd.to_datetime(df['closeDate'])
+
+    # Convert UTC to EST (Eastern Standard Time)
+    #df['openDate'] = df['openDate'].dt.tz_localize('UTC')
+    #df['closeDate'] = df['closeDate'].dt.tz_localize('UTC')
     
+    df['openEST'] = df['openDate'].dt.tz_convert('America/Los_Angeles')     
+    df['closeEST'] = df['closeDate'].dt.tz_convert('America/Los_Angeles')  
+  
+    df['openDate'] = df['openEST'].dt.date
+    df['closeDate'] = df['closeEST'].dt.date
+  
+    
+    df['openTime'] = df['openEST'].dt.time
+    df['closeTime'] = df['closeEST'].dt.time
+   
+   # df['holdTime'] = (df['closeTime'] - df['openTime']).dt.time
+    filtered = df[['openTime', 'closeTime', 'symbol', 'quantity', 'entry', 'exit', 'percent', 'profitAndLoss', 'balance', 'cost', 'openDate', 'closeDate']]
+     
     ### converting to EST
     #df['utc_time'] = pd.to_datetime(df['utc_time'])
 
@@ -81,7 +102,9 @@ try:
     st.header("Equity Curve")
     st.line_chart(filtered['balance'])
     st.bar_chart(filtered['profitAndLoss'])
-    st.dataframe(filtered.sort_values(by=['profitAndLoss']), hide_index=True)
+    st.dataframe(filtered, hide_index=True)
+    #st.dataframe(filtered.sort_values(by=['profitAndLoss']), hide_index=True)
+    
     #grouped = filtered.groupby('closedDateOnly').sum().reset_index()
     #print(grouped[['closedDateOnly', 'profitAndLoss']])
     #grouped[['closedDateOnly', 'profitAndLoss']].plot(kind='bar')
@@ -104,17 +127,18 @@ try:
     #st.dataframe(filtered, hide_index=True)
 
     st.header("Best Losers Win")
-    lastTradedDay = filtered.iloc[-1]['closedDateOnly']
-    tradedDays = filtered.closedDateOnly.unique()
+    lastTradedDay = filtered.iloc[-1]['closeDate']
+    tradedDays = filtered.closeDate.unique()
     option = st.selectbox('Select a date', tradedDays, index=tradedDays.size-1)
     
 
     
     #print(lastTradedDay)
-    lastDay = filtered[filtered['closedDateOnly'] == option]
+    lastDay = filtered[filtered['closeDate'] == option]
     lastDay['cumulative'] = lastDay['profitAndLoss'].cumsum()
     lastDay = lastDay.reset_index(drop=True)
-    st.dataframe(lastDay.iloc[:,3:],  hide_index=True)
+   # st.dataframe(lastDay.iloc[:,3:],  hide_index=True)
+    st.dataframe(lastDay,  hide_index=True)
     lastDayBalance = pd.concat([pd.Series([0]), lastDay['cumulative']]).reset_index(drop=True)
     st.line_chart(lastDayBalance)
     #st.dataframe(lastDayBalance)
@@ -126,7 +150,7 @@ try:
     )
     #st.bar_chart(lastDay['percent'])
     
-    dailyProfit = filtered.groupby('closedDateOnly')['profitAndLoss'].sum()
+    dailyProfit = filtered.groupby('closeDate')['profitAndLoss'].sum()
     #print(dailyProfit, dailyProfit.cumsum())
     #st.dataframe(dailyProfit, hide_index=True)
     dailyProfit_sorted = dailyProfit.sort_values(ascending=False)
