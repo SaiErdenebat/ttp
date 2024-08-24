@@ -148,7 +148,10 @@ try:
     st.bar_chart(
         lastDay, y=['cost','profitAndLoss'], color=["#a1c4a6", "#FF0000"]  # Optional
     )
-    #st.bar_chart(lastDay['percent'])
+    st.header("Profit and Loss")
+    st.bar_chart(lastDay['profitAndLoss'])
+    st.header("Percent")
+    st.bar_chart(lastDay['percent'])
     
     dailyProfit = filtered.groupby('closeDate')['profitAndLoss'].sum()
     #print(dailyProfit, dailyProfit.cumsum())
