@@ -78,8 +78,8 @@ try:
     #df['openDate'] = df['openDate'].dt.tz_localize('UTC')
     #df['closeDate'] = df['closeDate'].dt.tz_localize('UTC')
     
-    df['openEST'] = df['openDate'].dt.tz_convert('America/Los_Angeles')     
-    df['closeEST'] = df['closeDate'].dt.tz_convert('America/Los_Angeles')  
+    df['openEST'] = df['openDate'].dt.tz_convert('America/New_york')     
+    df['closeEST'] = df['closeDate'].dt.tz_convert('America/New_york')  
   
     df['openDate'] = df['openEST'].dt.date
     df['closeDate'] = df['closeEST'].dt.date
