@@ -62,7 +62,7 @@ try:
     #print(df['id'])
     df['entry'] = round(df['entry'], 2)
     df['exit'] = round(df['exit'], 2)
-    df['cost'] = df['entry'] * df['quantity']
+    df['exposure'] = df['entry'] * df['quantity']
     df['percent'] = round((df['entry']-df['exit'])/df['entry']*100, 2)##.astype(str) + '%'
     df['closedDateOnly'] = df['closeDate'].str.slice(0, 10)
     #df = df.sort_values(by=['closedDateOnly'])
@@ -89,7 +89,7 @@ try:
     df['closeTime'] = df['closeEST'].dt.time
    
    # df['holdTime'] = (df['closeTime'] - df['openTime']).dt.time
-    filtered = df[['openTime', 'closeTime', 'symbol', 'quantity', 'entry', 'exit', 'percent', 'profitAndLoss', 'balance', 'cost', 'openDate', 'closeDate']]
+    filtered = df[['openTime', 'closeTime', 'symbol', 'quantity', 'entry', 'exit', 'percent', 'profitAndLoss', 'balance', 'exposure', 'openDate', 'closeDate']]
      
     ### converting to EST
     #df['utc_time'] = pd.to_datetime(df['utc_time'])
@@ -101,15 +101,17 @@ try:
     
     st.header("Equity Curve")
     st.line_chart(filtered['balance'])
+    #st.area_chart(filtered['balance'], color=["#075d85"])
     st.bar_chart(filtered['profitAndLoss'])
     st.dataframe(filtered, hide_index=True)
+    st.scatter_chart(filtered.query('profitAndLoss > 0')['exposure'],color=["#17910c"])
+    st.scatter_chart(filtered.query('profitAndLoss < 0')['exposure'], color=["#FF0000"])
     #st.dataframe(filtered.sort_values(by=['profitAndLoss']), hide_index=True)
     
     #grouped = filtered.groupby('closedDateOnly').sum().reset_index()
     #print(grouped[['closedDateOnly', 'profitAndLoss']])
     #grouped[['closedDateOnly', 'profitAndLoss']].plot(kind='bar')
     #st.bar_chart(grouped[['profitAndLoss']])
-    
     
     
     sortedByPnL = filtered.sort_values(by=['profitAndLoss'])
@@ -120,13 +122,14 @@ try:
     
     #print(filtered)
     st.bar_chart(
-        filtered, x='closeDate', y=['profitAndLoss','cost'], color=["#FF0000", "#0000FF"]  # Optional
+        filtered, x='closeDate', y=['profitAndLoss','exposure'], color=["#FF0000", "#0000FF"]  # Optional
     )
     #st.bar_chart(filtered['percent'])
     #st.write(filtered)
     #st.dataframe(filtered, hide_index=True)
 
-    st.header("Best Losers Win")
+    ##############################################################################################
+    st.header("Best Losers Win") 
     lastTradedDay = filtered.iloc[-1]['closeDate']
     tradedDays = filtered.closeDate.unique()
     option = st.selectbox('Select a date', tradedDays, index=tradedDays.size-1)
@@ -141,12 +144,14 @@ try:
     st.dataframe(lastDay,  hide_index=True)
     lastDayBalance = pd.concat([pd.Series([0]), lastDay['cumulative']]).reset_index(drop=True)
     st.line_chart(lastDayBalance)
+    
+    st.scatter_chart(lastDay.query('profitAndLoss < 0')['percent'])
     #st.dataframe(lastDayBalance)
     #st.bar_chart(lastDay['profitAndLoss'])
-    #st.bar_chart(lastDay['cost'])
+    #st.bar_chart(lastDay['exposure'])
     
     st.bar_chart(
-        lastDay, y=['cost','profitAndLoss'], color=["#a1c4a6", "#FF0000"]  # Optional
+        lastDay, y=['exposure','profitAndLoss'], color=["#a1c4a6", "#FF0000"]  # Optional
     )
     st.header("Profit and Loss")
     st.bar_chart(lastDay['profitAndLoss'])
