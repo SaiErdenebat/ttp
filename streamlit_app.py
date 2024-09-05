@@ -1,6 +1,10 @@
 import streamlit as st
 import requests
 import pandas as pd
+import numpy as np
+import plotly.express as px
+
+st.set_page_config(layout="wide")
 
 payload = {
     'username': "",
@@ -13,7 +17,7 @@ payload = {
 #payload['password']= st.text_input("Enter a password", type="password")
 
 
-accountNumber = st.selectbox("Choose an account number:", (
+accountNumber = st.sidebar.selectbox("Choose an account number:", (
     "EEBP13017274",
     "12014517",
     "12016374",
@@ -91,6 +95,8 @@ try:
    # df['holdTime'] = (df['closeTime'] - df['openTime']).dt.time
     filtered = df[['openTime', 'closeTime', 'symbol', 'quantity', 'entry', 'exit', 'percent', 'profitAndLoss', 'balance', 'exposure', 'openDate', 'closeDate']]
      
+    filtered['color'] = np.where(filtered['profitAndLoss'] >=0, 'green', 'red')
+    fig = px.bar(filtered, x=df.index, y='profitAndLoss', color='color')
     ### converting to EST
     #df['utc_time'] = pd.to_datetime(df['utc_time'])
 
@@ -99,83 +105,98 @@ try:
     ##
     
     
-    st.header("Equity Curve")
-    st.line_chart(filtered['balance'])
-    #st.area_chart(filtered['balance'], color=["#075d85"])
-    st.bar_chart(filtered['profitAndLoss'])
-    st.dataframe(filtered, hide_index=True)
-    st.scatter_chart(filtered.query('profitAndLoss > 0')['exposure'],color=["#17910c"])
-    st.scatter_chart(filtered.query('profitAndLoss < 0')['exposure'], color=["#FF0000"])
-    #st.dataframe(filtered.sort_values(by=['profitAndLoss']), hide_index=True)
+    col1, col2 = st.columns(2)
+    with col1: 
     
-    #grouped = filtered.groupby('closedDateOnly').sum().reset_index()
-    #print(grouped[['closedDateOnly', 'profitAndLoss']])
-    #grouped[['closedDateOnly', 'profitAndLoss']].plot(kind='bar')
-    #st.bar_chart(grouped[['profitAndLoss']])
-    
-    
-    sortedByPnL = filtered.sort_values(by=['profitAndLoss'])
-    sortedByPnL = sortedByPnL.reset_index(drop=True)
-    #st.dataframe(sortedByPnL.iloc[:,2:])
-    #print(sortedByPnL['symbol'].tolist())
-    st.bar_chart(sortedByPnL['profitAndLoss'])
-    
-    #print(filtered)
-    st.bar_chart(
-        filtered, x='closeDate', y=['profitAndLoss','exposure'], color=["#FF0000", "#0000FF"]  # Optional
-    )
-    #st.bar_chart(filtered['percent'])
-    #st.write(filtered)
-    #st.dataframe(filtered, hide_index=True)
+        st.header("Equity Curve")
+        st.line_chart(filtered['balance'])
+        #st.bar_chart(filtered['profitAndLoss'])
+        st.plotly_chart(fig)
+        with st.expander('Data Preview'):
+            st.dataframe(filtered, hide_index=True)
+        st.write(filtered[filtered['profitAndLoss'] > 0].count()[0])
+        st.write(filtered[filtered['profitAndLoss'] < 0].shape[0])
+           ###################################################################
+        dailyProfit = filtered.groupby('closeDate')['profitAndLoss'].sum()
+        #print(dailyProfit, dailyProfit.cumsum())
+        #st.dataframe(dailyProfit, hide_index=True)
+        dailyProfit_sorted = dailyProfit.sort_values(ascending=False)
+        dailyProfit_sorted = dailyProfit_sorted.reset_index(drop=True)
+        st.header("Daily PnL")
+        st.bar_chart(dailyProfit)
+        st.bar_chart(dailyProfit_sorted)
+        #st.line_chart(dailyProfit)
+        
+        #print(filtered.to_string())
+        #filtered['profitAndLoss'].plot(kind='bar')
+        
+        #filtered['balance'].plot.line()
+        #st.bar_chart(filtered['profitAndLoss'])
+        
+        #st.area_chart(filtered['balance'], color=["#075d85"]) 
 
-    ##############################################################################################
-    st.header("Best Losers Win") 
-    lastTradedDay = filtered.iloc[-1]['closeDate']
-    tradedDays = filtered.closeDate.unique()
-    option = st.selectbox('Select a date', tradedDays, index=tradedDays.size-1)
-    
+        #st.scatter_chart(filtered.query('profitAndLoss > 0')['exposure'],color=["#17910c"])
+        #st.scatter_chart(filtered.query('profitAndLoss < 0')['exposure'], color=["#FF0000"])
+        #st.dataframe(filtered.sort_values(by=['profitAndLoss']), hide_index=True)
+        
+        #grouped = filtered.groupby('closedDateOnly').sum().reset_index()
+        #print(grouped[['closedDateOnly', 'profitAndLoss']])
+        #grouped[['closedDateOnly', 'profitAndLoss']].plot(kind='bar')
+        #st.bar_chart(grouped[['profitAndLoss']])
+        
+        
+        sortedByPnL = filtered.sort_values(by=['profitAndLoss'])
+        sortedByPnL = sortedByPnL.reset_index(drop=True)
+        #st.dataframe(sortedByPnL.iloc[:,2:])
+        #print(sortedByPnL['symbol'].tolist())
+        st.bar_chart(sortedByPnL['profitAndLoss'])
+        
+        #print(filtered)
+        #st.bar_chart(
+        #    filtered, x='closeDate', y=['profitAndLoss','exposure'], color=["#FF0000", "#0000FF"]  # Optional
+        #)
+        #st.bar_chart(filtered['percent'])
+        #st.write(filtered)
+        #st.dataframe(filtered, hide_index=True)
 
+     
+        
     
-    #print(lastTradedDay)
-    lastDay = filtered[filtered['closeDate'] == option]
-    lastDay['cumulative'] = lastDay['profitAndLoss'].cumsum()
-    lastDay = lastDay.reset_index(drop=True)
-   # st.dataframe(lastDay.iloc[:,3:],  hide_index=True)
-    st.dataframe(lastDay,  hide_index=True)
-    lastDayBalance = pd.concat([pd.Series([0]), lastDay['cumulative']]).reset_index(drop=True)
-    st.line_chart(lastDayBalance)
-    
-    st.scatter_chart(lastDay.query('profitAndLoss < 0')['percent'])
-    #st.dataframe(lastDayBalance)
-    #st.bar_chart(lastDay['profitAndLoss'])
-    #st.bar_chart(lastDay['exposure'])
-    
-    st.bar_chart(
-        lastDay, y=['exposure','profitAndLoss'], color=["#a1c4a6", "#FF0000"]  # Optional
-    )
-    st.header("Profit and Loss")
-    st.bar_chart(lastDay['profitAndLoss'])
-    st.header("Percent")
-    st.bar_chart(lastDay['percent'])
-    
-    dailyProfit = filtered.groupby('closeDate')['profitAndLoss'].sum()
-    #print(dailyProfit, dailyProfit.cumsum())
-    #st.dataframe(dailyProfit, hide_index=True)
-    dailyProfit_sorted = dailyProfit.sort_values(ascending=False)
-    dailyProfit_sorted = dailyProfit_sorted.reset_index(drop=True)
-    st.header("Daily PnL")
-    st.bar_chart(dailyProfit)
-    st.bar_chart(dailyProfit_sorted)
-    #st.line_chart(dailyProfit)
-    
-    #print(filtered.to_string())
-    #filtered['profitAndLoss'].plot(kind='bar')
-    
-    #filtered['balance'].plot.line()
-    #st.bar_chart(filtered['profitAndLoss'])
-    
+    with col2:
+        ##############################################################################################
+        st.header("Choose a specific day:") 
+        lastTradedDay = filtered.iloc[-1]['closeDate']
+        tradedDays = filtered.closeDate.unique()
+        option = st.selectbox('Select a date', tradedDays, index=tradedDays.size-1)
+        #st.header(option) 
 
-    
+        
+        #print(lastTradedDay)
+        lastDay = filtered[filtered['closeDate'] == option]
+        lastDay['cumulative'] = lastDay['profitAndLoss'].cumsum()
+        lastDay = lastDay.reset_index(drop=True)
+        # st.dataframe(lastDay.iloc[:,3:],  hide_index=True)
+        with st.expander('Trades'):
+            st.dataframe(lastDay,  hide_index=True)
+        lastDayBalance = pd.concat([pd.Series([0]), lastDay['cumulative']]).reset_index(drop=True)
+        st.line_chart(lastDayBalance)
+        
+        #st.scatter_chart(lastDay.query('profitAndLoss < 0')['percent'])
+        #st.dataframe(lastDayBalance)
+        #st.bar_chart(lastDay['profitAndLoss'])
+        #st.bar_chart(lastDay['exposure'])
+        
+        #st.bar_chart(
+        #    lastDay, y=['exposure','profitAndLoss'], color=["#a1c4a6", "#FF0000"]  # Optional
+        #)
+        st.header("Profit and Loss")
+        st.bar_chart(lastDay['profitAndLoss'])
+        st.header("Percent")
+        st.bar_chart(lastDay['percent'])
+            
+        
+
+            
     
 except KeyError:
     print("keyError") 
