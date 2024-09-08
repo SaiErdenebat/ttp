@@ -93,7 +93,7 @@ try:
     df['closeTime'] = df['closeEST'].dt.time
    
    # df['holdTime'] = (df['closeTime'] - df['openTime']).dt.time
-    filtered = df[['openTime', 'closeTime', 'symbol', 'quantity', 'entry', 'exit', 'percent', 'profitAndLoss', 'balance', 'exposure', 'openDate', 'closeDate']]
+    filtered = df[['openTime', 'closeTime', 'symbol', 'quantity', 'entry', 'exit', 'percent', 'profitAndLoss', 'balance', 'exposure', 'openDate', 'closeDate', 'fee']]
      
     filtered['color'] = np.where(filtered['profitAndLoss'] >=0, 'green', 'red')
     fig = px.bar(filtered, x=df.index, y='profitAndLoss', color='color')
@@ -108,23 +108,68 @@ try:
     col1, col2 = st.columns(2)
     with col1: 
     
+       
+            
+        ###################################################################
+        # Trade Metrics 
+        ###################################################################
+        numOfWinners = filtered[filtered['profitAndLoss'] > 0].count()[0]
+        numOfLosers = filtered[filtered['profitAndLoss'] < 0].shape[0]
+        totalTrades = numOfWinners + numOfLosers
+        
+        netProfitOrLoss = filtered['profitAndLoss'].sum().round()
+        averageWin = (filtered[filtered['profitAndLoss'] > 0]['profitAndLoss'].sum()/numOfWinners).round()
+        averageLoss = (filtered[filtered['profitAndLoss'] < 0]['profitAndLoss'].sum()/numOfLosers).round()
+        commissions = filtered['fee'].sum().round()
+        
+        subCol1, subCol2 = st.columns(2)
+        with subCol1: 
+            metricData = [
+                ['Net Profit / Loss', netProfitOrLoss], 
+                ['Winners', numOfWinners], 
+                ['Losers', numOfLosers],
+                ['Average Win', averageWin],
+                ['Average Loss', averageLoss],
+                ['Commissions', commissions],
+                ]
+            metricDf = pd.DataFrame(metricData, columns=['Metrics', ""])
+            st.dataframe(metricDf, hide_index=True)
+        with subCol2: 
+            winRate = "{:.1%}".format(numOfWinners/totalTrades)
+            st.metric('Win Rate', winRate)
+            pnlRatio = averageWin/averageLoss * -1
+            st.metric('Profit/Loss Ratio', round(pnlRatio, 2))
+            
+            winPct = numOfWinners/totalTrades 
+            LossPct = numOfLosers/totalTrades 
+            expectancy = winPct * averageWin - LossPct * averageLoss
+            st.metric('Expectancy', round(expectancy))
+      
+        
+        ###################################################################
+        
+        
         st.header("Equity Curve")
         st.line_chart(filtered['balance'])
         #st.bar_chart(filtered['profitAndLoss'])
         st.plotly_chart(fig)
         with st.expander('Data Preview'):
             st.dataframe(filtered, hide_index=True)
-        st.write(filtered[filtered['profitAndLoss'] > 0].count()[0])
-        st.write(filtered[filtered['profitAndLoss'] < 0].shape[0])
-           ###################################################################
+        ######################################################################
         dailyProfit = filtered.groupby('closeDate')['profitAndLoss'].sum()
+        #dailyProfit['closedDate'] = dailyProfit.index
+        dailyProfit = dailyProfit.reset_index()
         #print(dailyProfit, dailyProfit.cumsum())
         #st.dataframe(dailyProfit, hide_index=True)
-        dailyProfit_sorted = dailyProfit.sort_values(ascending=False)
+        dailyProfit_sorted = dailyProfit.sort_values(by=['profitAndLoss'])
         dailyProfit_sorted = dailyProfit_sorted.reset_index(drop=True)
+        
+        
         st.header("Daily PnL")
-        st.bar_chart(dailyProfit)
-        st.bar_chart(dailyProfit_sorted)
+        st.plotly_chart(px.bar(dailyProfit, x='closeDate', y='profitAndLoss'))
+        st.plotly_chart(px.bar(dailyProfit_sorted, x=dailyProfit_sorted.index, y='profitAndLoss'))
+        #st.bar_chart(dailyProfit)
+        #st.bar_chart(dailyProfit_sorted)
         #st.line_chart(dailyProfit)
         
         #print(filtered.to_string())
