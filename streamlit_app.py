@@ -1,10 +1,21 @@
+import plotly.io as pio
+
 import streamlit as st
 import requests
 import pandas as pd
 import numpy as np
 import plotly.express as px
 
-st.set_page_config(layout="wide")
+
+#st.set_page_config()
+pio.templates.default = "plotly"
+
+st.set_page_config(
+    page_title="Main",
+    page_icon="👋",
+    layout="wide",
+)
+################################################
 
 payload = {
     'username': "",
@@ -44,6 +55,53 @@ payload['password'] = st.secrets.db_password
 loginUrl=('https://api.tradethepool.com/user/login') 
 tradesUrl = ("https://api.tradethepool.com/position/closed/" + str(accountNumber))
 
+##################################################
+# functions
+##################################################
+
+def barChart(tempDf, x, y):
+    tempDf['positive'] = np.where(tempDf[y] >=0, True, False)
+    fig = px.bar(tempDf, x=x, y=y, color='positive', color_discrete_map={True: 'green', False:'red'}, text_auto='.2s')
+    fig.update_traces(textfont_size=12, textangle=0, textposition="outside", cliponaxis=False)
+    st.plotly_chart(fig)
+##################################################
+
+
+def getMetrics(tempDf, pnl, fee):
+    ###################################################################
+    # Trade Metrics 
+    ###################################################################
+    numOfWinners = tempDf[tempDf[pnl] > 0].count()[0]
+    numOfLosers = tempDf[tempDf[pnl] < 0].shape[0]
+    totalTrades = numOfWinners + numOfLosers
+    
+    netProfitOrLoss = tempDf[pnl].sum().round()
+    averageWin = (tempDf[tempDf[pnl] > 0][pnl].sum()/numOfWinners).round()
+    averageLoss = (tempDf[tempDf[pnl] < 0][pnl].sum()/numOfLosers).round()
+    commissions = tempDf[fee].sum().round()
+    
+    subCol1, subCol2, = st.columns(2)
+    with subCol1: 
+        metricData = [
+            ['Net Profit / Loss', netProfitOrLoss], 
+            ['Winners', numOfWinners], 
+            ['Losers', numOfLosers],
+            ['Average Win', averageWin],
+            ['Average Loss', averageLoss],
+            ['Commissions', commissions],
+            ]
+        metricDf = pd.DataFrame(metricData, columns=['Metrics', ""])
+        st.dataframe(metricDf, hide_index=True)
+    with subCol2: 
+        winRate = "{:.1%}".format(numOfWinners/totalTrades)
+        st.metric('Win Rate', winRate)
+        pnlRatio = averageWin/averageLoss * -1
+        st.metric('Profit/Loss Ratio', round(pnlRatio, 2))
+        
+        winPct = numOfWinners/totalTrades 
+        LossPct = numOfLosers/totalTrades 
+        expectancy = winPct * averageWin - LossPct * averageLoss
+        st.metric('Expectancy', round(expectancy))
 
 try:
     s = requests.Session()
@@ -63,13 +121,12 @@ try:
     #    'profitAndLoss', 'quantity', 'routeId', 'side', 'swap', 'symbol',
     #    'tradableInstrumentId', 'updatedAt', 'id'],
 
-    #print(df['id'])
+
     df['entry'] = round(df['entry'], 2)
     df['exit'] = round(df['exit'], 2)
     df['exposure'] = df['entry'] * df['quantity']
     df['percent'] = round((df['entry']-df['exit'])/df['entry']*100, 2)##.astype(str) + '%'
     df['closedDateOnly'] = df['closeDate'].str.slice(0, 10)
-    #df = df.sort_values(by=['closedDateOnly'])
     df = df.sort_values(by=['closeDate'])
     df['balance'] = df['profitAndLoss'].cumsum()
     df = df.reset_index(drop=True)
@@ -77,10 +134,8 @@ try:
     
     df['openDate'] = pd.to_datetime(df['openDate'])
     df['closeDate'] = pd.to_datetime(df['closeDate'])
-
-    # Convert UTC to EST (Eastern Standard Time)
-    #df['openDate'] = df['openDate'].dt.tz_localize('UTC')
-    #df['closeDate'] = df['closeDate'].dt.tz_localize('UTC')
+    
+    df['day_of_week'] = df['closeDate'].dt.day_name()
     
     df['openEST'] = df['openDate'].dt.tz_convert('America/New_york')     
     df['closeEST'] = df['closeDate'].dt.tz_convert('America/New_york')  
@@ -91,83 +146,111 @@ try:
     
     df['openTime'] = df['openEST'].dt.time
     df['closeTime'] = df['closeEST'].dt.time
-   
+    
    # df['holdTime'] = (df['closeTime'] - df['openTime']).dt.time
-    filtered = df[['openTime', 'closeTime', 'symbol', 'quantity', 'entry', 'exit', 'percent', 'profitAndLoss', 'balance', 'exposure', 'openDate', 'closeDate', 'fee']]
+    filtered = df[['openTime', 'closeTime', 'symbol', 'quantity', 'entry', 'exit', 'percent', 'profitAndLoss', 'balance', 'exposure', 'openDate', 'closeDate', 'fee', 'day_of_week']]
      
-    filtered['color'] = np.where(filtered['profitAndLoss'] >=0, 'green', 'red')
-    fig = px.bar(filtered, x=df.index, y='profitAndLoss', color='color')
-    ### converting to EST
-    #df['utc_time'] = pd.to_datetime(df['utc_time'])
+     
+     
+     
+    
+    ######################################################################################
+    # Main
+    ####################################################################################
+    on = st.sidebar.toggle("Main dashboard")
 
-    # Convert UTC to EST (Eastern Standard Time)
-    #df['est_time'] = df['utc_time'].dt.tz_localize('UTC').dt.tz_convert('America/New_York')     
-    ##
-    
-    
-    col1, col2 = st.columns(2)
-    with col1: 
-    
-       
+    if on:
+        #st.write("Feature activated!")
+        subCol1, subCol2, = st.columns([2, 3])
+        with subCol1:
+            getMetrics(filtered, 'profitAndLoss', 'fee')
+        with subCol2:
+            ##################################################################
+            # grouped by day of the week
+            ##################################################################
+            groupedByDay = filtered.groupby('day_of_week')
+            #st.dataframe(groupedByDay)
+            tempData = []
+            for key, item in groupedByDay:
+                #groupedByDate.get_group(key)
+                
+                ###################################################################
+                # Trade Metrics 
+                ###################################################################
+                numOfWinners = item[item['profitAndLoss'] > 0].count()[0]
+                numOfLosers = item[item['profitAndLoss'] < 0].shape[0]
+                totalTrades = numOfWinners + numOfLosers
+                
+                netProfitOrLoss = item['profitAndLoss'].sum().round()
+                averageWin = (item[item['profitAndLoss'] > 0]['profitAndLoss'].sum()/numOfWinners).round()
+                averageLoss = (item[item['profitAndLoss'] < 0]['profitAndLoss'].sum()/numOfLosers).round()
+                commissions = item['fee'].sum().round()
+                
+                winRate = "{:.1%}".format(numOfWinners/totalTrades)
+                pnlRatio = round((averageWin/averageLoss * -1), 2) 
+                
+                winPct = numOfWinners/totalTrades 
+                LossPct = numOfLosers/totalTrades 
+                expectancy = winPct * averageWin - LossPct * averageLoss
+                
+                data = {
+                    'Day': key, 
+                    '# of Trades': totalTrades, 
+                    'Net PnL': netProfitOrLoss, 
+                    'Win Rate': winRate,
+                    'PnL ratio': pnlRatio,
+                    'Expectancy': expectancy,
+                    'Commissions': commissions
+                    }
+                #temp = pd.DataFrame(data)
+                tempData.append(data)
+            dayMetricDf = pd.DataFrame(tempData)
+            dayMetricDf = dayMetricDf.sort_values(by=['Net PnL'])
+        
+            
+            sorted_weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+            dayMetricDf['Day'] = pd.Categorical(dayMetricDf['Day'], sorted_weekdays)
+            dayMetricDf = dayMetricDf.sort_values("Day")
+            st.dataframe(dayMetricDf, hide_index=True)
+            ##################################################################
+        
+        
+            
+                    
+            
             
         ###################################################################
-        # Trade Metrics 
-        ###################################################################
-        numOfWinners = filtered[filtered['profitAndLoss'] > 0].count()[0]
-        numOfLosers = filtered[filtered['profitAndLoss'] < 0].shape[0]
-        totalTrades = numOfWinners + numOfLosers
-        
-        netProfitOrLoss = filtered['profitAndLoss'].sum().round()
-        averageWin = (filtered[filtered['profitAndLoss'] > 0]['profitAndLoss'].sum()/numOfWinners).round()
-        averageLoss = (filtered[filtered['profitAndLoss'] < 0]['profitAndLoss'].sum()/numOfLosers).round()
-        commissions = filtered['fee'].sum().round()
-        
-        subCol1, subCol2 = st.columns(2)
-        with subCol1: 
-            metricData = [
-                ['Net Profit / Loss', netProfitOrLoss], 
-                ['Winners', numOfWinners], 
-                ['Losers', numOfLosers],
-                ['Average Win', averageWin],
-                ['Average Loss', averageLoss],
-                ['Commissions', commissions],
-                ]
-            metricDf = pd.DataFrame(metricData, columns=['Metrics', ""])
-            st.dataframe(metricDf, hide_index=True)
-        with subCol2: 
-            winRate = "{:.1%}".format(numOfWinners/totalTrades)
-            st.metric('Win Rate', winRate)
-            pnlRatio = averageWin/averageLoss * -1
-            st.metric('Profit/Loss Ratio', round(pnlRatio, 2))
-            
-            winPct = numOfWinners/totalTrades 
-            LossPct = numOfLosers/totalTrades 
-            expectancy = winPct * averageWin - LossPct * averageLoss
-            st.metric('Expectancy', round(expectancy))
-      
-        
-        ###################################################################
         
         
-        st.header("Equity Curve")
-        st.line_chart(filtered['balance'])
-        #st.bar_chart(filtered['profitAndLoss'])
-        st.plotly_chart(fig)
-        with st.expander('Data Preview'):
-            st.dataframe(filtered, hide_index=True)
-        ######################################################################
+        ##st.header("Equity Curve")
+        #st.line_chart(filtered['balance'])
+        #st.bar_chart(filtered['profitAndLoss'])s
+        st.header("Daily PnL")
         dailyProfit = filtered.groupby('closeDate')['profitAndLoss'].sum()
-        #dailyProfit['closedDate'] = dailyProfit.index
         dailyProfit = dailyProfit.reset_index()
+        barChart(dailyProfit, 'closeDate', 'profitAndLoss')
+
+
+        ######################################################################
+
+        symbolSum = filtered.groupby('symbol')['profitAndLoss'].sum()
+        symbolSum = symbolSum.reset_index()
+        symbolSum = symbolSum.sort_values(by=['profitAndLoss'])
+        barChart(symbolSum, 'symbol', 'profitAndLoss')
+        
         #print(dailyProfit, dailyProfit.cumsum())
         #st.dataframe(dailyProfit, hide_index=True)
-        dailyProfit_sorted = dailyProfit.sort_values(by=['profitAndLoss'])
-        dailyProfit_sorted = dailyProfit_sorted.reset_index(drop=True)
+        #dailyProfit_sorted = dailyProfit.sort_values(by=['profitAndLoss'])
+        #dailyProfit_sorted = dailyProfit_sorted.reset_index(drop=True)
         
         
-        st.header("Daily PnL")
-        st.plotly_chart(px.bar(dailyProfit, x='closeDate', y='profitAndLoss'))
-        st.plotly_chart(px.bar(dailyProfit_sorted, x=dailyProfit_sorted.index, y='profitAndLoss'))
+        
+        #dailyProfit['color'] = np.where(dailyProfit['profitAndLoss'] >=0, 'green', 'red')
+        
+        #st.plotly_chart(px.bar(dailyProfit, x=dailyProfit.index, y='profitAndLoss', text_auto=True, color='color'))
+
+        
+        #st.plotly_chart(px.bar(dailyProfit_sorted, x=dailyProfit_sorted.index, y='profitAndLoss'))
         #st.bar_chart(dailyProfit)
         #st.bar_chart(dailyProfit_sorted)
         #st.line_chart(dailyProfit)
@@ -190,11 +273,11 @@ try:
         #st.bar_chart(grouped[['profitAndLoss']])
         
         
-        sortedByPnL = filtered.sort_values(by=['profitAndLoss'])
-        sortedByPnL = sortedByPnL.reset_index(drop=True)
+        #sortedByPnL = filtered.sort_values(by=['profitAndLoss'])
+        #sortedByPnL = sortedByPnL.reset_index(drop=True)
         #st.dataframe(sortedByPnL.iloc[:,2:])
         #print(sortedByPnL['symbol'].tolist())
-        st.bar_chart(sortedByPnL['profitAndLoss'])
+        #st.bar_chart(sortedByPnL['profitAndLoss'])
         
         #print(filtered)
         #st.bar_chart(
@@ -204,44 +287,58 @@ try:
         #st.write(filtered)
         #st.dataframe(filtered, hide_index=True)
 
-     
-        
     
-    with col2:
-        ##############################################################################################
-        st.header("Choose a specific day:") 
-        lastTradedDay = filtered.iloc[-1]['closeDate']
-        tradedDays = filtered.closeDate.unique()
-        option = st.selectbox('Select a date', tradedDays, index=tradedDays.size-1)
-        #st.header(option) 
+        
+  
+    else:
+    ##############################################################################################
+        subCol1, subCol2 = st.columns(2)
+        with subCol1:
+            st.header("Choose a specific day:") 
+            lastTradedDay = filtered.iloc[-1]['closeDate']
+            tradedDays = filtered.closeDate.unique()
+            option = st.selectbox('Select a date', tradedDays, index=tradedDays.size-1)
+            #st.header(option) 
 
+            
+            #print(lastTradedDay)
+            lastDay = filtered[filtered['closeDate'] == option]
+            lastDay['cumulative'] = lastDay['profitAndLoss'].cumsum()
+            lastDay = lastDay.reset_index(drop=True)
+            # st.dataframe(lastDay.iloc[:,3:],  hide_index=True)
+            with st.expander('Trades'):
+                st.dataframe(lastDay,  hide_index=True)
+            lastDayBalance = pd.concat([pd.Series([0]), lastDay['cumulative']]).reset_index(drop=True)
+            st.line_chart(lastDayBalance)
+            
+            #st.scatter_chart(lastDay.query('profitAndLoss < 0')['percent'])
+            #st.dataframe(lastDayBalance)
+            #st.bar_chart(lastDay['profitAndLoss'])
+            #st.bar_chart(lastDay['exposure'])
+            
+            #st.bar_chart(
+            #    lastDay, y=['exposure','profitAndLoss'], color=["#a1c4a6", "#FF0000"]  # Optional
+            #)
+        with subCol2: 
+            getMetrics(lastDay, 'profitAndLoss', 'fee')
         
-        #print(lastTradedDay)
-        lastDay = filtered[filtered['closeDate'] == option]
-        lastDay['cumulative'] = lastDay['profitAndLoss'].cumsum()
-        lastDay = lastDay.reset_index(drop=True)
-        # st.dataframe(lastDay.iloc[:,3:],  hide_index=True)
-        with st.expander('Trades'):
-            st.dataframe(lastDay,  hide_index=True)
-        lastDayBalance = pd.concat([pd.Series([0]), lastDay['cumulative']]).reset_index(drop=True)
-        st.line_chart(lastDayBalance)
-        
-        #st.scatter_chart(lastDay.query('profitAndLoss < 0')['percent'])
-        #st.dataframe(lastDayBalance)
-        #st.bar_chart(lastDay['profitAndLoss'])
-        #st.bar_chart(lastDay['exposure'])
-        
-        #st.bar_chart(
-        #    lastDay, y=['exposure','profitAndLoss'], color=["#a1c4a6", "#FF0000"]  # Optional
-        #)
         st.header("Profit and Loss")
-        st.bar_chart(lastDay['profitAndLoss'])
-        st.header("Percent")
-        st.bar_chart(lastDay['percent'])
-            
+        with st.expander('Trades'):
+                st.dataframe(lastDay,  hide_index=True)
+        subCol1, subCol2, subCol3 = st.columns(3)
+        lastDay = lastDay.sort_values(by=['closeTime'])
+        with subCol1:
+            barChart(lastDay, 'closeTime', 'profitAndLoss')
+        with subCol2:
+            barChart(lastDay, 'symbol', 'profitAndLoss')
+        with subCol3:
+            lastDaySymbolGroupby = lastDay.groupby('symbol')['profitAndLoss'].sum()
+            lastDaySymbolGroupby = lastDaySymbolGroupby.reset_index()
+            barChart(lastDaySymbolGroupby, 'symbol', 'profitAndLoss')
+        #st.header("Percent")
+        #st.bar_chart(lastDay['percent'])
         
 
-            
     
 except KeyError:
     print("keyError") 
