@@ -63,6 +63,7 @@ def barChart(tempDf, x, y):
     tempDf['positive'] = np.where(tempDf[y] >=0, True, False)
     fig = px.bar(tempDf, x=x, y=y, color='positive', color_discrete_map={True: 'green', False:'red'}, text_auto='.2s')
     fig.update_traces(textfont_size=12, textangle=0, textposition="outside", cliponaxis=False)
+    fig.update_xaxes(categoryorder='category ascending')
     st.plotly_chart(fig)
 ##################################################
 
@@ -100,7 +101,7 @@ def getMetrics(tempDf, pnl, fee):
         
         winPct = numOfWinners/totalTrades 
         LossPct = numOfLosers/totalTrades 
-        expectancy = winPct * averageWin - LossPct * averageLoss
+        expectancy = winPct * averageWin - LossPct * (averageLoss*-1)
         st.metric('Expectancy', round(expectancy))
 
 try:
@@ -139,16 +140,18 @@ try:
     
     df['openEST'] = df['openDate'].dt.tz_convert('America/New_york')     
     df['closeEST'] = df['closeDate'].dt.tz_convert('America/New_york')  
-  
+    
+    df['holdTime'] = df['closeEST']-df['openEST']
     df['openDate'] = df['openEST'].dt.date
     df['closeDate'] = df['closeEST'].dt.date
   
     
     df['openTime'] = df['openEST'].dt.time
     df['closeTime'] = df['closeEST'].dt.time
+
     
    # df['holdTime'] = (df['closeTime'] - df['openTime']).dt.time
-    filtered = df[['openTime', 'closeTime', 'symbol', 'quantity', 'entry', 'exit', 'percent', 'profitAndLoss', 'balance', 'exposure', 'openDate', 'closeDate', 'fee', 'day_of_week']]
+    filtered = df[['openTime', 'closeTime', 'holdTime','symbol', 'quantity', 'entry', 'exit', 'percent', 'profitAndLoss', 'balance', 'exposure', 'openDate', 'closeDate', 'fee', 'day_of_week']]
      
      
      
@@ -157,13 +160,14 @@ try:
     ######################################################################################
     # Main
     ####################################################################################
-    on = st.sidebar.toggle("Main dashboard")
+    on = st.toggle("Main dashboard")
 
     if on:
         #st.write("Feature activated!")
         subCol1, subCol2, = st.columns([2, 3])
         with subCol1:
             getMetrics(filtered, 'profitAndLoss', 'fee')
+            st.write(filtered['profitAndLoss'].sum()/9050*100)
         with subCol2:
             ##################################################################
             # grouped by day of the week
@@ -191,7 +195,7 @@ try:
                 
                 winPct = numOfWinners/totalTrades 
                 LossPct = numOfLosers/totalTrades 
-                expectancy = winPct * averageWin - LossPct * averageLoss
+                expectancy = winPct * averageWin - LossPct * (averageLoss * -1)
                 
                 data = {
                     'Day': key, 
@@ -199,7 +203,7 @@ try:
                     'Net PnL': netProfitOrLoss, 
                     'Win Rate': winRate,
                     'PnL ratio': pnlRatio,
-                    'Expectancy': expectancy,
+                    'Expectancy': round(expectancy),
                     'Commissions': commissions
                     }
                 #temp = pd.DataFrame(data)
@@ -222,8 +226,7 @@ try:
         ###################################################################
         
         
-        ##st.header("Equity Curve")
-        #st.line_chart(filtered['balance'])
+        
         #st.bar_chart(filtered['profitAndLoss'])s
         st.header("Daily PnL")
         dailyProfit = filtered.groupby('closeDate')['profitAndLoss'].sum()
@@ -238,6 +241,26 @@ try:
         symbolSum = symbolSum.sort_values(by=['profitAndLoss'])
         barChart(symbolSum, 'symbol', 'profitAndLoss')
         
+        
+        st.dataframe(filtered)
+        filtered['indexNum'] = filtered.index 
+        barChart(filtered, 'indexNum', 'profitAndLoss')
+
+        
+        #df_scatter = filtered.sort_values(by=['closeTime'])
+        df_scatter = filtered
+        df_scatter['positive'] = np.where(df_scatter['profitAndLoss'] >=0, True, False)
+        
+
+        fig_scatter = px.scatter(df_scatter, x='closeTime', y='profitAndLoss', color='positive', color_discrete_map={True: 'green', False:'red'})
+        
+        fig_scatter.update_xaxes(categoryorder='category ascending')
+        st.plotly_chart(fig_scatter)
+        
+        st.header("Equity Curve")
+        st.line_chart(filtered['balance'])
+    
+
         #print(dailyProfit, dailyProfit.cumsum())
         #st.dataframe(dailyProfit, hide_index=True)
         #dailyProfit_sorted = dailyProfit.sort_values(by=['profitAndLoss'])
@@ -294,7 +317,6 @@ try:
     ##############################################################################################
         subCol1, subCol2 = st.columns(2)
         with subCol1:
-            st.header("Choose a specific day:") 
             lastTradedDay = filtered.iloc[-1]['closeDate']
             tradedDays = filtered.closeDate.unique()
             option = st.selectbox('Select a date', tradedDays, index=tradedDays.size-1)
@@ -304,12 +326,13 @@ try:
             #print(lastTradedDay)
             lastDay = filtered[filtered['closeDate'] == option]
             lastDay['cumulative'] = lastDay['profitAndLoss'].cumsum()
+    
             lastDay = lastDay.reset_index(drop=True)
             # st.dataframe(lastDay.iloc[:,3:],  hide_index=True)
-            with st.expander('Trades'):
-                st.dataframe(lastDay,  hide_index=True)
+
             lastDayBalance = pd.concat([pd.Series([0]), lastDay['cumulative']]).reset_index(drop=True)
-            st.line_chart(lastDayBalance)
+            barChart(lastDay, 'closeTime', 'profitAndLoss')
+            
             
             #st.scatter_chart(lastDay.query('profitAndLoss < 0')['percent'])
             #st.dataframe(lastDayBalance)
@@ -321,17 +344,17 @@ try:
             #)
         with subCol2: 
             getMetrics(lastDay, 'profitAndLoss', 'fee')
+            st.area_chart(lastDayBalance)
         
-        st.header("Profit and Loss")
-        with st.expander('Trades'):
+        with st.expander('Show Trades'):
                 st.dataframe(lastDay,  hide_index=True)
-        subCol1, subCol2, subCol3 = st.columns(3)
+        
         lastDay = lastDay.sort_values(by=['closeTime'])
+        
+        subCol1, subCol2 = st.columns(2)
         with subCol1:
-            barChart(lastDay, 'closeTime', 'profitAndLoss')
-        with subCol2:
             barChart(lastDay, 'symbol', 'profitAndLoss')
-        with subCol3:
+        with subCol2:
             lastDaySymbolGroupby = lastDay.groupby('symbol')['profitAndLoss'].sum()
             lastDaySymbolGroupby = lastDaySymbolGroupby.reset_index()
             barChart(lastDaySymbolGroupby, 'symbol', 'profitAndLoss')
