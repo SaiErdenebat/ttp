@@ -29,7 +29,7 @@ payload = {
 
 
 accountNumber = st.sidebar.selectbox("Choose an account number:", (
-    "EEBP13017274",
+    "FEBP13020502",
     "12014517",
     "12016374",
     "F12016374",
@@ -46,7 +46,8 @@ accountNumber = st.sidebar.selectbox("Choose an account number:", (
     "E13009422",
     "E13010054",
     "F13011327",
-    "EEBP13017137"
+    "EEBP13017137",
+    "EEBP13017274",
     ))
 
 payload['username'] = st.secrets.db_username
