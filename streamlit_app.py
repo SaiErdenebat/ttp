@@ -7,8 +7,7 @@ import numpy as np
 import plotly.express as px
 
 
-#st.set_page_config()
-pio.templates.default = "plotly"
+
 
 st.set_page_config(
     page_title="Main",
@@ -28,7 +27,7 @@ payload = {
 #payload['password']= st.text_input("Enter a password", type="password")
 
 
-accountNumber = st.sidebar.selectbox("Choose an account number:", (
+accountNumber = st.selectbox("Choose an account number:", (
     "FEBP13020502",
     "12014517",
     "12016374",
@@ -61,7 +60,10 @@ tradesUrl = ("https://api.tradethepool.com/position/closed/" + str(accountNumber
 ##################################################
 
 def barChart(tempDf, x, y):
-    tempDf['positive'] = np.where(tempDf[y] >=0, True, False)
+    if(y == 'profitAndLoss'):
+        tempDf['positive'] = np.where(tempDf[y] >=0, True, False)
+    else:   
+        tempDf['positive'] = np.where(tempDf[x] >=0, True, False)
     fig = px.bar(tempDf, x=x, y=y, color='positive', color_discrete_map={True: 'green', False:'red'}, text_auto='.2s')
     fig.update_traces(textfont_size=12, textangle=0, textposition="outside", cliponaxis=False)
     fig.update_xaxes(categoryorder='category ascending')
@@ -168,7 +170,7 @@ try:
         subCol1, subCol2, = st.columns([2, 3])
         with subCol1:
             getMetrics(filtered, 'profitAndLoss', 'fee')
-            st.write(filtered['profitAndLoss'].sum()/9050*100)
+            st.write(filtered['profitAndLoss'].sum()/16000*100)
         with subCol2:
             ##################################################################
             # grouped by day of the week
@@ -239,11 +241,25 @@ try:
 
         symbolSum = filtered.groupby('symbol')['profitAndLoss'].sum()
         symbolSum = symbolSum.reset_index()
-        symbolSum = symbolSum.sort_values(by=['profitAndLoss'])
-        barChart(symbolSum, 'symbol', 'profitAndLoss')
+
         
+        positive_symbolSum = symbolSum[symbolSum['profitAndLoss'] > 0]
+        positive_symbolSum = positive_symbolSum.sort_values(by=['profitAndLoss'], ascending=True)
         
-        st.dataframe(filtered)
+        negative_symbolSum = symbolSum[symbolSum['profitAndLoss'] < 0]
+        negative_symbolSum = negative_symbolSum.sort_values(by=['profitAndLoss'], ascending=False)
+        
+        subCol1, subCol2, = st.columns(2)
+        with subCol1: 
+            barChart(negative_symbolSum, 'profitAndLoss', 'symbol')
+        with subCol2:
+            barChart(positive_symbolSum, 'profitAndLoss', 'symbol')
+        symbols = symbolSum.symbol.unique()
+        #print(symbols.sort())
+        option = st.selectbox('Select a symbol', symbols)
+        filteredSymbol = filtered[filtered['symbol'] == option]
+        
+        st.dataframe(filteredSymbol)
         filtered['indexNum'] = filtered.index 
         barChart(filtered, 'indexNum', 'profitAndLoss')
 
@@ -259,7 +275,7 @@ try:
         st.plotly_chart(fig_scatter)
         
         st.header("Equity Curve")
-        st.line_chart(filtered['balance'])
+        st.area_chart(filtered['balance'])
     
 
         #print(dailyProfit, dailyProfit.cumsum())
