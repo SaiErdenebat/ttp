@@ -10,8 +10,6 @@ import plotly.express as px
 
 
 st.set_page_config(
-    page_title="Main",
-    page_icon="👋",
     layout="wide",
 )
 ################################################
@@ -27,33 +25,44 @@ payload = {
 #payload['password']= st.text_input("Enter a password", type="password")
 
 
-accountNumber = st.selectbox("Choose an account number:", (
-    "FEBP13020502",
+accounts = [
     "12014517",
     "12016374",
     "F12016374",
     "12020109",
     "F12020109",
-    #"12025061",
-    #"13000402",
+    "12025061",
+    "13000402",
     "13000809",
     "E13002593",
     "F13002878",
-    #"E13005910",
-    #"E13006961",
-    #"E13009393",
+    "E13005910",
+    "E13006961",
+    "E13009393",
     "E13009422",
     "E13010054",
     "F13011327",
     "EEBP13017137",
     "EEBP13017274",
-    ))
+    "FEBP13020502",
+    "EMBP13017395",
+    "EMBPLE13022074",
+    "EMBPLE13022568",
+    "EMBPLE13022721",
+    "EMBPLE13023018",
+    "EMBPLE13023043",
+    "EMBPLE13023168",
+    "EMBPLE13023336"
+] 
+print(accounts[::-1])
+accountNumber = st.selectbox("Choose an account number:", (accounts[::-1]))
 
 payload['username'] = st.secrets.db_username
 payload['password'] = st.secrets.db_password
 
 loginUrl=('https://api.tradethepool.com/user/login') 
-tradesUrl = ("https://api.tradethepool.com/position/closed/" + str(accountNumber))
+tradesUrl = ("https://api.tradethepool.com/position/closed/" + str(accountNumber) + "?page=1&limit=10000&sort[field]=closeDate&sort[direction]=-1")
+
 
 ##################################################
 # functions
@@ -105,18 +114,21 @@ def getMetrics(tempDf, pnl, fee):
         winPct = numOfWinners/totalTrades 
         LossPct = numOfLosers/totalTrades 
         expectancy = winPct * averageWin - LossPct * (averageLoss*-1)
-        st.metric('Expectancy', round(expectancy))
+        #st.metric('Expectancy', expectancy if(expectancy == 0) else round(expectancy))
+       
+        st.metric('Expectancy',expectancy)
+      
+        
 
 try:
     s = requests.Session()
     p = s.post(loginUrl, data=payload)
     token = p.json()['data']['token']
-
-
     r = s.get(tradesUrl, headers={'Authorization': "Bearer {}".format(token)})
+    #print(r)
     
     df = pd.json_normalize(r.json()['data']['results'])
-
+    print(pd.json_normalize(r.json()['data']))
     ###
     ### printing columns
     ###
@@ -155,7 +167,7 @@ try:
     
    # df['holdTime'] = (df['closeTime'] - df['openTime']).dt.time
     filtered = df[['openTime', 'closeTime', 'holdTime','symbol', 'quantity', 'entry', 'exit', 'percent', 'profitAndLoss', 'balance', 'exposure', 'openDate', 'closeDate', 'fee', 'day_of_week']]
-     
+          
      
      
      
@@ -163,14 +175,13 @@ try:
     ######################################################################################
     # Main
     ####################################################################################
-    on = st.toggle("Main dashboard")
+    on = st.toggle("Specific Day")
 
-    if on:
+    if not on:
         #st.write("Feature activated!")
         subCol1, subCol2, = st.columns([2, 3])
         with subCol1:
             getMetrics(filtered, 'profitAndLoss', 'fee')
-            st.write(filtered['profitAndLoss'].sum()/16000*100)
         with subCol2:
             ##################################################################
             # grouped by day of the week
@@ -206,7 +217,7 @@ try:
                     'Net PnL': netProfitOrLoss, 
                     'Win Rate': winRate,
                     'PnL ratio': pnlRatio,
-                    'Expectancy': round(expectancy),
+                    'Expectancy': expectancy,
                     'Commissions': commissions
                     }
                 #temp = pd.DataFrame(data)
