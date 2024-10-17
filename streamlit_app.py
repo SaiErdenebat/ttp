@@ -5,7 +5,7 @@ import requests
 import pandas as pd
 import numpy as np
 import plotly.express as px
-
+import math
 
 
 
@@ -54,7 +54,6 @@ accounts = [
     "EMBPLE13023168",
     "EMBPLE13023336"
 ] 
-print(accounts[::-1])
 accountNumber = st.selectbox("Choose an account number:", (accounts[::-1]))
 
 payload['username'] = st.secrets.db_username
@@ -116,7 +115,11 @@ def getMetrics(tempDf, pnl, fee):
         expectancy = winPct * averageWin - LossPct * (averageLoss*-1)
         #st.metric('Expectancy', expectancy if(expectancy == 0) else round(expectancy))
        
-        st.metric('Expectancy',expectancy)
+
+        if not math.isnan(expectancy):
+            st.metric('Expectancy', math.floor(expectancy))
+        else:
+            st.metric('Expectancy', expectancy)
       
         
 
@@ -128,7 +131,6 @@ try:
     #print(r)
     
     df = pd.json_normalize(r.json()['data']['results'])
-    print(pd.json_normalize(r.json()['data']))
     ###
     ### printing columns
     ###
@@ -289,57 +291,6 @@ try:
         st.area_chart(filtered['balance'])
     
 
-        #print(dailyProfit, dailyProfit.cumsum())
-        #st.dataframe(dailyProfit, hide_index=True)
-        #dailyProfit_sorted = dailyProfit.sort_values(by=['profitAndLoss'])
-        #dailyProfit_sorted = dailyProfit_sorted.reset_index(drop=True)
-        
-        
-        
-        #dailyProfit['color'] = np.where(dailyProfit['profitAndLoss'] >=0, 'green', 'red')
-        
-        #st.plotly_chart(px.bar(dailyProfit, x=dailyProfit.index, y='profitAndLoss', text_auto=True, color='color'))
-
-        
-        #st.plotly_chart(px.bar(dailyProfit_sorted, x=dailyProfit_sorted.index, y='profitAndLoss'))
-        #st.bar_chart(dailyProfit)
-        #st.bar_chart(dailyProfit_sorted)
-        #st.line_chart(dailyProfit)
-        
-        #print(filtered.to_string())
-        #filtered['profitAndLoss'].plot(kind='bar')
-        
-        #filtered['balance'].plot.line()
-        #st.bar_chart(filtered['profitAndLoss'])
-        
-        #st.area_chart(filtered['balance'], color=["#075d85"]) 
-
-        #st.scatter_chart(filtered.query('profitAndLoss > 0')['exposure'],color=["#17910c"])
-        #st.scatter_chart(filtered.query('profitAndLoss < 0')['exposure'], color=["#FF0000"])
-        #st.dataframe(filtered.sort_values(by=['profitAndLoss']), hide_index=True)
-        
-        #grouped = filtered.groupby('closedDateOnly').sum().reset_index()
-        #print(grouped[['closedDateOnly', 'profitAndLoss']])
-        #grouped[['closedDateOnly', 'profitAndLoss']].plot(kind='bar')
-        #st.bar_chart(grouped[['profitAndLoss']])
-        
-        
-        #sortedByPnL = filtered.sort_values(by=['profitAndLoss'])
-        #sortedByPnL = sortedByPnL.reset_index(drop=True)
-        #st.dataframe(sortedByPnL.iloc[:,2:])
-        #print(sortedByPnL['symbol'].tolist())
-        #st.bar_chart(sortedByPnL['profitAndLoss'])
-        
-        #print(filtered)
-        #st.bar_chart(
-        #    filtered, x='closeDate', y=['profitAndLoss','exposure'], color=["#FF0000", "#0000FF"]  # Optional
-        #)
-        #st.bar_chart(filtered['percent'])
-        #st.write(filtered)
-        #st.dataframe(filtered, hide_index=True)
-
-    
-        
   
     else:
     ##############################################################################################
