@@ -52,9 +52,11 @@ accounts = [
     "EMBPLE13023018",
     "EMBPLE13023043",
     "EMBPLE13023168",
-    "EMBPLE13023336"
+    "EMBPLE13023336 (20k eval LE passed)",
+    "FMBPLE13023617 (20k funded LE)",
+    "FMBPLE13023847 (20k funded LE)",
 ] 
-accountNumber = st.selectbox("Choose an account number:", (accounts[::-1]))
+accountNumber = st.selectbox("Choose an account number:", (accounts[::-1])).split()[0]
 
 payload['username'] = st.secrets.db_username
 payload['password'] = st.secrets.db_password
@@ -128,7 +130,6 @@ try:
     p = s.post(loginUrl, data=payload)
     token = p.json()['data']['token']
     r = s.get(tradesUrl, headers={'Authorization': "Bearer {}".format(token)})
-    #print(r)
     
     df = pd.json_normalize(r.json()['data']['results'])
     ###
@@ -213,6 +214,9 @@ try:
                 LossPct = numOfLosers/totalTrades 
                 expectancy = winPct * averageWin - LossPct * (averageLoss * -1)
                 
+                if not math.isnan(expectancy):
+                    expectancy =  math.floor(expectancy)
+                
                 data = {
                     'Day': key, 
                     '# of Trades': totalTrades, 
@@ -278,6 +282,11 @@ try:
 
         
         #df_scatter = filtered.sort_values(by=['closeTime'])
+       
+        
+        st.header("Equity Curve")
+        st.area_chart(filtered['balance'])
+        
         df_scatter = filtered
         df_scatter['positive'] = np.where(df_scatter['profitAndLoss'] >=0, True, False)
         
@@ -286,9 +295,7 @@ try:
         
         fig_scatter.update_xaxes(categoryorder='category ascending')
         st.plotly_chart(fig_scatter)
-        
-        st.header("Equity Curve")
-        st.area_chart(filtered['balance'])
+
     
 
   
