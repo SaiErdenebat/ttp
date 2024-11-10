@@ -55,6 +55,8 @@ accounts = [
     "EMBPLE13023336 (20k eval LE passed)",
     "FMBPLE13023617 (20k funded LE)",
     "FMBPLE13023847 (20k funded LE)",
+    "EMBPLE13024656 (20k eval  LE)",
+    "EEBP13025025 (160k eval)"
 ] 
 accountNumber = st.selectbox("Choose an account number:", (accounts[::-1])).split()[0]
 
