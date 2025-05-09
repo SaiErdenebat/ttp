@@ -6,7 +6,7 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import math
-
+import http.client
 
 
 st.set_page_config(
@@ -18,54 +18,6 @@ payload = {
     'username': "",
     'password': ""
 }
-##
-## custom username and password text inputs and account number
-##
-#payload['username'] = st.text_input("Enter an email", type="default")
-#payload['password']= st.text_input("Enter a password", type="password")
-
-
-accounts = [
-    "12014517",
-    "12016374",
-    "F12016374",
-    "12020109",
-    "F12020109",
-    "12025061",
-    "13000402",
-    "13000809",
-    "E13002593",
-    "F13002878",
-    "E13005910",
-    "E13006961",
-    "E13009393",
-    "E13009422",
-    "E13010054",
-    "F13011327",
-    "EEBP13017137",
-    "EEBP13017274",
-    "FEBP13020502",
-    "EMBP13017395",
-    "EMBPLE13022074",
-    "EMBPLE13022568",
-    "EMBPLE13022721",
-    "EMBPLE13023018",
-    "EMBPLE13023043",
-    "EMBPLE13023168",
-    "EMBPLE13023336 (20k eval LE passed)",
-    "FMBPLE13023617 (20k funded LE)",
-    "FMBPLE13023847 (20k funded LE)",
-    "EMBPLE13024656 (20k eval  LE)",
-    "EEBP13025025 (160k eval)"
-] 
-accountNumber = st.selectbox("Choose an account number:", (accounts[::-1])).split()[0]
-
-payload['username'] = st.secrets.db_username
-payload['password'] = st.secrets.db_password
-
-loginUrl=('https://api.tradethepool.com/user/login') 
-tradesUrl = ("https://api.tradethepool.com/position/closed/" + str(accountNumber) + "?page=1&limit=10000&sort[field]=closeDate&sort[direction]=-1")
-
 
 ##################################################
 # functions
@@ -124,16 +76,39 @@ def getMetrics(tempDf, pnl, fee):
             st.metric('Expectancy', math.floor(expectancy))
         else:
             st.metric('Expectancy', expectancy)
-      
+        
         
 
 try:
+    
+    
+    loginUrl=('https://api.tradethepool.com/authentication/login') 
+    payload['username'] = st.secrets.db_username
+    payload['password'] = st.secrets.db_password
+
+
     s = requests.Session()
     p = s.post(loginUrl, data=payload)
-    token = p.json()['data']['token']
-    r = s.get(tradesUrl, headers={'Authorization': "Bearer {}".format(token)})
+    #token = p.json()['data']['token']
     
-    df = pd.json_normalize(r.json()['data']['results'])
+    
+ 
+    #title = st.text_input("Account Number")
+
+    accounts = [
+        #title
+        "FMBPLE13031305",
+        "FMBPLE213035639",
+        "FMBPLE313036220",
+    ]
+    
+    df = pd.DataFrame()
+    for account in accounts:
+        tradesUrl = ("https://api.tradethepool.com/position/closed/" + str(account) + "?page=1&limit=10000&sort[field]=closeDate&sort[direction]=-1")
+        #r = s.get(tradesUrl, headers={'Authorization': "Bearer {}".format(token)})
+        r = s.get(tradesUrl)
+        temp_df = pd.json_normalize(r.json()['data']['results'])
+        df = pd.concat([df, temp_df])
     ###
     ### printing columns
     ###
@@ -171,7 +146,7 @@ try:
 
     
    # df['holdTime'] = (df['closeTime'] - df['openTime']).dt.time
-    filtered = df[['openTime', 'closeTime', 'holdTime','symbol', 'quantity', 'entry', 'exit', 'percent', 'profitAndLoss', 'balance', 'exposure', 'openDate', 'closeDate', 'fee', 'day_of_week']]
+    filtered = df[['openDate', 'closeDate', 'openTime', 'closeTime', 'holdTime','symbol', 'quantity', 'entry', 'exit', 'percent', 'profitAndLoss', 'balance', 'exposure', 'fee', 'day_of_week']]
           
      
      
@@ -188,58 +163,9 @@ try:
         with subCol1:
             getMetrics(filtered, 'profitAndLoss', 'fee')
         with subCol2:
-            ##################################################################
-            # grouped by day of the week
-            ##################################################################
-            groupedByDay = filtered.groupby('day_of_week')
-            #st.dataframe(groupedByDay)
-            tempData = []
-            for key, item in groupedByDay:
-                #groupedByDate.get_group(key)
-                
-                ###################################################################
-                # Trade Metrics 
-                ###################################################################
-                numOfWinners = item[item['profitAndLoss'] > 0].count()[0]
-                numOfLosers = item[item['profitAndLoss'] < 0].shape[0]
-                totalTrades = numOfWinners + numOfLosers
-                
-                netProfitOrLoss = item['profitAndLoss'].sum().round()
-                averageWin = (item[item['profitAndLoss'] > 0]['profitAndLoss'].sum()/numOfWinners).round()
-                averageLoss = (item[item['profitAndLoss'] < 0]['profitAndLoss'].sum()/numOfLosers).round()
-                commissions = item['fee'].sum().round()
-                
-                winRate = "{:.1%}".format(numOfWinners/totalTrades)
-                pnlRatio = round((averageWin/averageLoss * -1), 2) 
-                
-                winPct = numOfWinners/totalTrades 
-                LossPct = numOfLosers/totalTrades 
-                expectancy = winPct * averageWin - LossPct * (averageLoss * -1)
-                
-                if not math.isnan(expectancy):
-                    expectancy =  math.floor(expectancy)
-                
-                data = {
-                    'Day': key, 
-                    '# of Trades': totalTrades, 
-                    'Net PnL': netProfitOrLoss, 
-                    'Win Rate': winRate,
-                    'PnL ratio': pnlRatio,
-                    'Expectancy': expectancy,
-                    'Commissions': commissions
-                    }
-                #temp = pd.DataFrame(data)
-                tempData.append(data)
-            dayMetricDf = pd.DataFrame(tempData)
-            dayMetricDf = dayMetricDf.sort_values(by=['Net PnL'])
-        
-            
-            sorted_weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
-            dayMetricDf['Day'] = pd.Categorical(dayMetricDf['Day'], sorted_weekdays)
-            dayMetricDf = dayMetricDf.sort_values("Day")
-            st.dataframe(dayMetricDf, hide_index=True)
-            ##################################################################
-        
+            st.header("Equity curve")
+            st.line_chart(filtered['balance'])
+
         
             
                     
@@ -250,13 +176,13 @@ try:
         
         
         #st.bar_chart(filtered['profitAndLoss'])s
+ 
+        
+        ######################################################################
         st.header("Daily PnL")
         dailyProfit = filtered.groupby('closeDate')['profitAndLoss'].sum()
         dailyProfit = dailyProfit.reset_index()
         barChart(dailyProfit, 'closeDate', 'profitAndLoss')
-
-
-        ######################################################################
 
         symbolSum = filtered.groupby('symbol')['profitAndLoss'].sum()
         symbolSum = symbolSum.reset_index()
@@ -278,16 +204,25 @@ try:
         option = st.selectbox('Select a symbol', symbols)
         filteredSymbol = filtered[filtered['symbol'] == option]
         
-        st.dataframe(filteredSymbol)
-        filtered['indexNum'] = filtered.index 
+        st.dataframe(filteredSymbol, hide_index=True)
+        filtered['indexNum'] = filtered.index
+        
+        with st.expander('Show Trades'):
+                st.dataframe(filtered,  hide_index=True)
+                
+        st.header("P/L") 
         barChart(filtered, 'indexNum', 'profitAndLoss')
 
+        st.header("Exposure")
+        barChart(filtered, 'indexNum', 'exposure')
+        
+        #barChart(filtered, 'indexNum', 'quantity')
+        
         
         #df_scatter = filtered.sort_values(by=['closeTime'])
        
         
-        st.header("Equity Curve")
-        st.area_chart(filtered['balance'])
+        
         
         df_scatter = filtered
         df_scatter['positive'] = np.where(df_scatter['profitAndLoss'] >=0, True, False)
@@ -332,7 +267,7 @@ try:
             #)
         with subCol2: 
             getMetrics(lastDay, 'profitAndLoss', 'fee')
-            st.area_chart(lastDayBalance)
+            st.line_chart(lastDayBalance)
         
         with st.expander('Show Trades'):
                 st.dataframe(lastDay,  hide_index=True)
