@@ -163,8 +163,59 @@ try:
         with subCol1:
             getMetrics(filtered, 'profitAndLoss', 'fee')
         with subCol2:
-            st.header("Equity curve")
-            st.line_chart(filtered['balance'])
+            #################################################################
+            # grouped by day of the week
+            ##################################################################
+            groupedByDay = filtered.groupby('day_of_week')
+            #st.dataframe(groupedByDay)
+            tempData = []
+            for key, item in groupedByDay:
+                #groupedByDate.get_group(key)
+                
+                ###################################################################
+                # Trade Metrics 
+                ###################################################################
+                numOfWinners = item[item['profitAndLoss'] > 0].count()[0]
+                numOfLosers = item[item['profitAndLoss'] < 0].shape[0]
+                totalTrades = numOfWinners + numOfLosers
+                
+                netProfitOrLoss = item['profitAndLoss'].sum().round()
+                averageWin = (item[item['profitAndLoss'] > 0]['profitAndLoss'].sum()/numOfWinners).round()
+                averageLoss = (item[item['profitAndLoss'] < 0]['profitAndLoss'].sum()/numOfLosers).round()
+                commissions = item['fee'].sum().round()
+                
+                winRate = "{:.1%}".format(numOfWinners/totalTrades)
+                pnlRatio = round((averageWin/averageLoss * -1), 2) 
+                
+                winPct = numOfWinners/totalTrades 
+                LossPct = numOfLosers/totalTrades 
+                expectancy = winPct * averageWin - LossPct * (averageLoss * -1)
+                
+                if not math.isnan(expectancy):
+                    expectancy =  math.floor(expectancy)
+                
+                data = {
+                    'Day': key, 
+                    '# of Trades': totalTrades, 
+                    'Net PnL': netProfitOrLoss, 
+                    'Win Rate': winRate,
+                    'PnL ratio': pnlRatio,
+                    'Expectancy': expectancy,
+                    'Commissions': commissions
+                    }
+                #temp = pd.DataFrame(data)
+                tempData.append(data)
+            dayMetricDf = pd.DataFrame(tempData)
+            dayMetricDf = dayMetricDf.sort_values(by=['Net PnL'])
+        
+            
+            sorted_weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+            dayMetricDf['Day'] = pd.Categorical(dayMetricDf['Day'], sorted_weekdays)
+            dayMetricDf = dayMetricDf.sort_values("Day")
+            st.dataframe(dayMetricDf, hide_index=True)
+            ##################################################################
+        st.header("Equity curve")
+        st.line_chart(filtered['balance'])
 
         
             
