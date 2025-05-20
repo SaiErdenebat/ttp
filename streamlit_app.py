@@ -156,7 +156,8 @@ try:
     ######################################################################################
     # Main
     ####################################################################################
-    on = st.toggle("Specific Day")
+    
+    on = st.toggle("Toggle To see specific day stats")
 
     if not on:
         #st.write("Feature activated!")
